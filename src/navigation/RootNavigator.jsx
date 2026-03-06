@@ -341,7 +341,7 @@ export default function RootNavigator() {
   OneSignal.Debug.setLogLevel(LogLevel.Verbose);
 
   // OneSignal ініціалізація
-  OneSignal.initialize('1055c72e-0775-4c76-8ba6-0c9917dd13df');
+  OneSignal.initialize('0cd388f0-ab0f-451c-a7ca-b37fe1bc007e');
   //OneSignal.Debug.setLogLevel(OneSignal.LogLevel.Verbose);
 
   // Встановлюємо цей ID як OneSignal External ID
