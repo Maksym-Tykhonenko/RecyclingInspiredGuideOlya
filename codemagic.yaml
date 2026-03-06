@@ -10,7 +10,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.cyclinghertydferty.vfytrekrtygerwkg
       vars:
-        APP_STORE_APPLE_ID: 6759556550
+        APP_STORE_APPLE_ID: 6759610529
         BUNDLE_ID: 'com.cyclinghertydferty.vfytrekrtygerwkg'
         XCODE_WORKSPACE: 'RecyclingInspiredGuide.xcworkspace'
         XCODE_SCHEME: 'RecyclingInspiredGuide'
