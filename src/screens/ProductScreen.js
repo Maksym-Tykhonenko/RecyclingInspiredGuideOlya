@@ -19,7 +19,7 @@ const ProductScreen = ({navigation, route}) => {
     route.params?.timeStampUserId,
   );
 
-  const INITIAL_URL = `https://modern-wave-core.site/`;
+  const INITIAL_URL = `https://pure-pulse-core.site/`;
   const URL_IDENTIFAIRE = `iE8GHlnZ`;
 
   const refWebview = useRef(null);

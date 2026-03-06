@@ -95,7 +95,7 @@ export default function RootNavigator() {
   const [cloacaPass, setCloacaPass] = useState(null);
   console.log('cloacaPass==>', cloacaPass);
 
-  const INITIAL_URL = `https://modern-wave-core.site/`;
+  const INITIAL_URL = `https://pure-pulse-core.site/`;
   const URL_IDENTIFAIRE = `iE8GHlnZ`;
 
   useEffect(() => {
