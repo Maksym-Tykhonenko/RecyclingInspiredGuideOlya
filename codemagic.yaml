@@ -8,10 +8,10 @@ workflows:
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.cyclinghertydferty.vfytrekrtygerwkg
+        bundle_identifier: com.donertysev.kasevivserx
       vars:
         APP_STORE_APPLE_ID: 6759610529
-        BUNDLE_ID: 'com.cyclinghertydferty.vfytrekrtygerwkg'
+        BUNDLE_ID: 'com.donertysev.kasevivserx'
         XCODE_WORKSPACE: 'RecyclingInspiredGuide.xcworkspace'
         XCODE_SCHEME: 'RecyclingInspiredGuide'
     scripts:
