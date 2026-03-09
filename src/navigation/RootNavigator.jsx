@@ -417,7 +417,7 @@ export default function RootNavigator() {
       await new Promise((resolve, reject) => {
         appsFlyer.initSdk(
           {
-            devKey: 'x9yyR6FpRhA5dbtFaKfmQi',
+            devKey: 'FnAGoKcAsbcSxg8XXDRVWY',
             appId: '6759610529',
             isDebug: true,
             onInstallConversionDataListener: true,
@@ -449,7 +449,7 @@ export default function RootNavigator() {
       await new Promise((resolve, reject) => {
         appsFlyer.initSdk(
           {
-            devKey: 'x9yyR6FpRhA5dbtFaKfmQi',
+            devKey: 'FnAGoKcAsbcSxg8XXDRVWY',
             appId: '6759610529',
             isDebug: true,
             onInstallConversionDataListener: true,
